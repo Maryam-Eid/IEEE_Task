@@ -9,7 +9,7 @@ function rookMoves($position)
     for ($i = 0; $i < 8; $i++) {
         // Exclude the current position
         if ($i != $column) {
-            echo Rook . phpchr($i + ord('a')) . $row . "\n";
+            echo chr($i + ord('a')) . $row . "\n";
         }
     }
 
