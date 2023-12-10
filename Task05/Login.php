@@ -1,32 +1,38 @@
 <?php
 session_start();
 
+// Database connection
 $db = new PDO('mysql:host=localhost;dbname=users', 'root', '');
 
 try {
+    // Check if the form is submitted
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $username = $_POST["username"];
-        $password = $_POST["password"];
 
-        if (empty($username) || empty($password)) {
+        if (empty($_POST['username']) || empty($_POST['password'])) {
             throw new Exception("Username and password are required!");
         }
 
+        // Retrieve user data based on the username
         $query = $db->prepare('SELECT * FROM users WHERE username = ?');
-        $query->execute([$username]);
+        $query->execute([$_POST['username']]);
         $user = $query->fetch(PDO::FETCH_ASSOC);
 
+        // Check if the user is found
         if ($user) {
-            if (password_verify($password, $user['password'])) {
+            // Verify the password
+            if (password_verify($_POST['password'], $user['password'])) {
                 echo "<div class='alert alert-success position-absolute text-center w-100'>You're in!</div>";
             } else {
+                // Password doesn't  match
                 throw new Exception("Invalid Password!");
             }
         } else {
+            // User not found
             throw new Exception("User Not Found!");
         }
     }
 } catch (Exception $e) {
+    // Display error message if an exception is caught
     echo "<div class='alert alert-danger position-absolute text-center w-100'>" . $e->getMessage() . "</div>";
 } finally {
     session_destroy();

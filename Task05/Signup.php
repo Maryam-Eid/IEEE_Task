@@ -1,64 +1,72 @@
 <?php
 session_start();
 
+// Database connection
 $db = new PDO('mysql:host=localhost;dbname=users', 'root', '');
 
 try {
+    // Check if the form is submitted
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $username = $_POST["username"];
-        $password = $_POST["password"];
-        $verifyPassword = $_POST["verify_password"];
-        $first_name = $_POST["first_name"];
-        $last_name = $_POST["last_name"];
-        $email = $_POST["email"];
-        $country = $_POST["country"];
-        $date_of_birth = $_POST["date_of_birth"];
 
-        if (empty($username) || empty($password) || empty($verifyPassword) || empty($first_name) || empty($last_name) || empty($email) || empty($country) || empty($date_of_birth)) {
+        if (empty($_POST['username']) || empty($_POST['password']) || empty($_POST['verify_password']) || empty($_POST['first_name']) || empty($_POST['last_name']) || empty($_POST['email']) || empty($_POST['country']) || empty($_POST['date_of_birth'])) {
             throw new Exception("All fields are required!");
         }
 
-        if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
+        // Validate the username format using a regular expression
+        if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $_POST['username'])) {
             throw new Exception("Invalid username format. Use only letters, numbers, and underscores!");
         }
 
-        if (strlen($password) < 6) {
+        if (strlen( $_POST['password']) < 6) {
             throw new Exception("Password must be at least 6 characters long!");
         }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // Validate email format
+        if (!filter_var( $_POST['email'], FILTER_VALIDATE_EMAIL)) {
             throw new Exception("Invalid email format!");
         }
 
-        if ($password != $verifyPassword) {
+        if ( $_POST['password'] !=  $_POST['verify_password']) {
             throw new Exception("Passwords do not match!");
         }
 
-        $usernameQuery = $db->prepare('SELECT * FROM users WHERE username = ?');
-        $usernameQuery->execute([$username]);
-        $existingUsername = $usernameQuery->fetch(PDO::FETCH_ASSOC);
+        // Check if the username or email already exists in the database
+        $checkQuery = $db->prepare('SELECT * FROM users WHERE username = :username OR email = :email');
+        $checkQuery->execute(['username' => $_POST['username'], 'email' => $_POST['email']]);
+        $check = $checkQuery->fetch(PDO::FETCH_ASSOC);
 
-        $emailQuery = $db->prepare('SELECT * FROM users WHERE email = ?');
-        $emailQuery->execute([$email]);
-        $existingEmail = $emailQuery->fetch(PDO::FETCH_ASSOC);
-
-        if ($existingUsername) {
-            throw new Exception("Username already exists!");
-        } elseif ($existingEmail) {
-            throw new Exception("Email is already registered!");
+        if($check){
+            if ($check['username'] == $_POST['username']) {
+                throw new Exception("Username already exists!");
+            } elseif ($check['email'] == $_POST['email']) {
+                throw new Exception("Email is already registered!");
+            }
         }
 
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        // Insert user data into the database
         $insertQuery = $db->prepare('INSERT INTO users (username, password, first_name, last_name, email, country, date_of_birth) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        $insertQuery->execute([$username, $hashedPassword, $first_name, $last_name, $email, $country, $date_of_birth]);
+        $insertQuery->execute([$_POST['username'], password_hash($_POST['password'], PASSWORD_DEFAULT), $_POST['first_name'], $_POST['last_name'], $_POST['email'], $_POST['country'], $_POST['date_of_birth']]);
 
         echo "<div class='alert alert-success position-absolute text-center w-100'>Account created successfully!</div>";
     }
 } catch (Exception $e) {
+    // Display error message if an exception is caught
     echo "<div class='alert alert-danger position-absolute text-center w-100'>" . $e->getMessage() . "</div>";
 } finally {
     session_destroy();
 }
+
+//CREATE TABLE users (
+//    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+//    first_name VARCHAR(50) NOT NULL,
+//    last_name VARCHAR(50) NOT NULL,
+//    email VARCHAR(100) NOT NULL,
+//    username VARCHAR(50) NOT NULL,
+//    password VARCHAR(255) NOT NULL,
+//    country VARCHAR(50) NOT NULL,
+//    date_of_birth DATE NOT NULL
+//);
+
 ?>
 
 
